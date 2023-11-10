@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FunctionApp1
@@ -15,16 +16,16 @@ namespace FunctionApp1
     public class UserProcessingFunctions
     {
 
-        [FunctionName(Names.TriggerUserProcessingHttp)]
+        [FunctionName(nameof(TriggerUserProcessingHttp))]
         public async Task<HttpResponseMessage> TriggerUserProcessingHttp([HttpTrigger(AuthorizationLevel.Function, "PATCH", Route = "TriggerUserProcessing/{userId}")]HttpRequestMessage request, string userId, [DurableClient]IDurableClient durableClient)
         {
-            var instanceId = await durableClient.StartNewAsync<string>(Names.ProcessUserOrchestration, userId);
+            var instanceId = await durableClient.StartNewAsync<string>(nameof(ProcessUserOrchestration), userId);
             return durableClient.CreateCheckStatusResponse(request, instanceId);
         }
 
 
 
-        [FunctionName(Names.ProcessUserOrchestration)]
+        [FunctionName(nameof(ProcessUserOrchestration))]
         public async Task ProcessUserOrchestration([OrchestrationTrigger]IDurableOrchestrationContext context, ILogger logger)
         {
             //------------------------------------------------------------------------------------------------------------------------------------
@@ -43,7 +44,7 @@ namespace FunctionApp1
             // Create a reference to the entity, and initialize the entity with the orchestration ID for the current instance.
             // This will make the current orchestration the current for handling processing of a given user, invalidating any other
             // running instance that has been started for the same user.
-            var eid = new EntityId(Names.ProcessUserState, userId);
+            var eid = new EntityId(nameof(EntityFunctions.ProcessUserState), userId);
             await context.CallEntityAsync(eid, nameof(ProcessUserState.InitializeUserProcessing) , context.InstanceId);
             //------------------------------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +52,7 @@ namespace FunctionApp1
 
             //------------------------------------------------------------------------------------------------------------------------------------
             // Simulating some work performed in the orchestration to allow other orchestrations to be triggered while this is still running.
-            await context.CallActivityAsync(Names.Delay, 5000);
+            await context.CreateTimer(context.CurrentUtcDateTime.AddSeconds(5), CancellationToken.None);
             //------------------------------------------------------------------------------------------------------------------------------------
 
 

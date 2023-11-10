@@ -11,7 +11,7 @@ namespace FunctionApp1
     public class EntityFunctions
     {
 
-        [FunctionName(Names.ProcessUserState)]
+        [FunctionName(nameof(ProcessUserState))]
         public Task ProcessUserState([EntityTrigger]IDurableEntityContext context)
         {
             return context.DispatchAsync<ProcessUserState>();
